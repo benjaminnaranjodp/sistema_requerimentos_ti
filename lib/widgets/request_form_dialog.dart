@@ -74,7 +74,7 @@ class _RequestFormDialogState extends State<RequestFormDialog> {
             if (_formKey.currentState!.validate()) {
               final request = Request(
                 id: DateTime.now().millisecondsSinceEpoch.toString(),
-                userId: 'current_user', // Changed on submission in screen
+                userId: 'current_user',
                 moduleId: widget.module.id,
                 date: widget.date,
                 time: _time,

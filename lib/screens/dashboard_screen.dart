@@ -60,7 +60,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: Row(
         children: [
-          // Izquierda: Pisos y Modulos
           Expanded(
             flex: 1,
             child: Container(
@@ -75,7 +74,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           const VerticalDivider(width: 1),
-          // Centro: Detalles / Panel TI
           Expanded(
             flex: 2,
             child: Padding(
@@ -84,7 +82,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           const VerticalDivider(width: 1),
-          // Derecha: Calendario
           Expanded(
             flex: 1,
             child: Padding(

@@ -33,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final success = await authProvider.login(
+    final error = await authProvider.login(
       _emailController.text.trim(),
       _passwordController.text,
     );
@@ -41,17 +41,42 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (success) {
+    if (error == null) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const DashboardScreen()),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Correo o contraseña incorrectos'),
+        SnackBar(
+          content: Text(error),
           backgroundColor: Colors.redAccent,
-          duration: Duration(seconds: 3),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isLoading = true);
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final error = await authProvider.signInWithGoogle();
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (error == null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 4),
         ),
       );
     }
@@ -136,12 +161,28 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoading ? null : _loginWithGoogle,
+                      icon: Image.network(
+                        'https://upload.wikimedia.org/wikipedia/commons/tls/t/t/Google_%22G%22_Logo.svg/24px-Google_%22G%22_Logo.svg.png',
+                        height: 24,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.g_mobiledata, size: 32),
+                      ),
+                      label: const Text('Entrar con Google', style: TextStyle(fontSize: 16)),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       TextButton(
                         onPressed: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => ForgotPasswordScreen()));
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()));
                         },
                         child: const Text('¿Olvidó su contraseña?'),
                       ),
@@ -153,8 +194,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  const Text('Usuarios de prueba:\nEstudiante: usuario@test.cl / 123\nTI: ti@test.cl / 123', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
                 ],
               ),
             ),
