@@ -10,7 +10,9 @@ import '../widgets/section_list_widget.dart';
 import '../widgets/module_detail_widget.dart';
 import '../widgets/request_form_dialog.dart';
 import '../widgets/admin_request_list.dart';
+import '../widgets/docente_request_list.dart';
 import 'login_screen.dart';
+import 'edit_profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -23,117 +25,415 @@ class _DashboardScreenState extends State<DashboardScreen> {
   DateTime _selectedDay = DateTime.now();
   DateTime _focusedDay = DateTime.now();
   Module? _selectedModule;
+  int _mobileTabIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize Firestore listeners after the first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initListeners();
+    });
+  }
+
+  void _initListeners() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final requestProvider = Provider.of<RequestProvider>(context, listen: false);
+
+    if (authProvider.isAdmin) {
+      requestProvider.listenAllRequests();
+    } else if (authProvider.currentUser != null) {
+      requestProvider.listenUserRequests(authProvider.currentUser!.id);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final dataProvider = Provider.of<DataProvider>(context);
-    final requestProvider = Provider.of<RequestProvider>(context);
-    
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 768;
 
     if (!authProvider.isAuthenticated) {
-      return const Center(child: CircularProgressIndicator());
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
-    
+
     final isAdmin = authProvider.isAdmin;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isAdmin ? 'Dashboard Departamento TI' : 'Dashboard Docente'),
-        backgroundColor: Colors.indigo,
-        foregroundColor: Colors.white,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Center(child: Text(authProvider.currentUser?.username ?? '')),
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              authProvider.logout();
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const LoginScreen())
-              );
-            },
-          ),
-        ],
+      appBar: _buildAppBar(authProvider, isAdmin),
+      body: isMobile
+          ? _buildMobileLayout(dataProvider, authProvider, isAdmin)
+          : _buildDesktopLayout(dataProvider, authProvider, isAdmin),
+      bottomNavigationBar: isMobile
+          ? _buildBottomNav(isAdmin)
+          : null,
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(AuthProvider authProvider, bool isAdmin) {
+    return AppBar(
+      title: Text(
+        isAdmin ? 'Panel TI' : 'Panel Docente',
+        style: const TextStyle(fontWeight: FontWeight.w600),
       ),
-      body: Row(
-        children: [
-          Expanded(
-            flex: 1,
-            child: Container(
-              color: Colors.grey.withAlpha(10),
-              child: SectionListWidget(
-                sections: dataProvider.sections,
-                selectedModule: _selectedModule,
-                onModuleSelected: (module) {
-                  setState(() => _selectedModule = module);
-                },
-              ),
-            ),
-          ),
-          const VerticalDivider(width: 1),
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: _buildMainContent(requestProvider, authProvider),
-            ),
-          ),
-          const VerticalDivider(width: 1),
-          Expanded(
-            flex: 1,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: SingleChildScrollView(
-                child: Column(
+      backgroundColor: Colors.indigo.shade700,
+      foregroundColor: Colors.white,
+      elevation: 2,
+      actions: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Center(
+            child: PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'edit') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                  );
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit, size: 18, color: Colors.indigo),
+                      SizedBox(width: 8),
+                      Text('Editar datos'),
+                    ],
+                  ),
+                ),
+              ],
+              offset: const Offset(0, 40),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(30),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    CalendarWidget(
-                      selectedDay: _selectedDay,
-                      focusedDay: _focusedDay,
-                      onDaySelected: (selectedDay, focusedDay) {
-                        setState(() {
-                          _selectedDay = selectedDay;
-                          _focusedDay = focusedDay;
-                        });
-                      },
+                    Icon(
+                      isAdmin ? Icons.admin_panel_settings : Icons.school,
+                      size: 18,
+                      color: Colors.white70,
                     ),
-                    const SizedBox(height: 20),
-                    if (isAdmin)
-                      const Card(
-                        child: Padding(
-                          padding: EdgeInsets.all(12.0),
-                          child: Text(
-                            'Modo TI Activo. Las solicitudes corresponden a la fecha del calendario.', 
-                            style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold)
-                          ),
-                        ),
+                    const SizedBox(width: 6),
+                    Text(
+                      authProvider.currentUser?.username ?? '',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
                       ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.arrow_drop_down, size: 18, color: Colors.white),
                   ],
                 ),
               ),
             ),
           ),
-        ],
-      ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.logout),
+          tooltip: 'Cerrar Sesión',
+          onPressed: () {
+            authProvider.logout();
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+            );
+          },
+        ),
+      ],
     );
   }
 
-  Widget _buildMainContent(RequestProvider requestProvider, AuthProvider authProvider) {
+  // ──────────────── MOBILE LAYOUT ────────────────
+
+  Widget _buildMobileLayout(DataProvider dataProvider, AuthProvider authProvider, bool isAdmin) {
+    if (isAdmin) {
+      return _buildMobileAdminLayout(authProvider);
+    } else {
+      return _buildMobileDocenteLayout(dataProvider, authProvider);
+    }
+  }
+
+  Widget _buildMobileAdminLayout(AuthProvider authProvider) {
+    switch (_mobileTabIndex) {
+      case 0:
+        return const Padding(
+          padding: EdgeInsets.all(16),
+          child: AdminRequestList(),
+        );
+      case 1:
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: CalendarWidget(
+            selectedDay: _selectedDay,
+            focusedDay: _focusedDay,
+            onDaySelected: (selectedDay, focusedDay) {
+              setState(() {
+                _selectedDay = selectedDay;
+                _focusedDay = focusedDay;
+              });
+            },
+          ),
+        );
+      default:
+        return const SizedBox();
+    }
+  }
+
+  Widget _buildMobileDocenteLayout(DataProvider dataProvider, AuthProvider authProvider) {
+    switch (_mobileTabIndex) {
+      case 0:
+        return SectionListWidget(
+          sections: dataProvider.sections,
+          selectedModule: _selectedModule,
+          onModuleSelected: (module) {
+            setState(() {
+              _selectedModule = module;
+              _mobileTabIndex = 1;
+            });
+          },
+        );
+      case 1:
+        return _selectedModule != null
+            ? Padding(
+                padding: const EdgeInsets.all(16),
+                child: ModuleDetailWidget(
+                  module: _selectedModule!,
+                  onRequestCreated: () => _showRequestForm(context, authProvider),
+                ),
+              )
+            : Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.touch_app, size: 64, color: Colors.grey.shade400),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Selecciona una sala primero',
+                      style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              );
+      case 2:
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              CalendarWidget(
+                selectedDay: _selectedDay,
+                focusedDay: _focusedDay,
+                onDaySelected: (selectedDay, focusedDay) {
+                  setState(() {
+                    _selectedDay = selectedDay;
+                    _focusedDay = focusedDay;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: DocenteRequestList(
+                  userId: authProvider.currentUser?.id ?? '',
+                ),
+              ),
+            ],
+          ),
+        );
+      default:
+        return const SizedBox();
+    }
+  }
+
+  Widget _buildBottomNav(bool isAdmin) {
+    if (isAdmin) {
+      return NavigationBar(
+        selectedIndex: _mobileTabIndex,
+        onDestinationSelected: (index) => setState(() => _mobileTabIndex = index),
+        backgroundColor: Colors.indigo.shade50,
+        indicatorColor: Colors.indigo.shade100,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.list_alt),
+            selectedIcon: Icon(Icons.list_alt, color: Colors.indigo),
+            label: 'Solicitudes',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_month),
+            selectedIcon: Icon(Icons.calendar_month, color: Colors.indigo),
+            label: 'Calendario',
+          ),
+        ],
+      );
+    }
+
+    return NavigationBar(
+      selectedIndex: _mobileTabIndex,
+      onDestinationSelected: (index) => setState(() => _mobileTabIndex = index),
+      backgroundColor: Colors.indigo.shade50,
+      indicatorColor: Colors.indigo.shade100,
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.meeting_room_outlined),
+          selectedIcon: Icon(Icons.meeting_room, color: Colors.indigo),
+          label: 'Salas',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.computer_outlined),
+          selectedIcon: Icon(Icons.computer, color: Colors.indigo),
+          label: 'Detalle',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.history),
+          selectedIcon: Icon(Icons.history, color: Colors.indigo),
+          label: 'Mis Solicitudes',
+        ),
+      ],
+    );
+  }
+
+  // ──────────────── DESKTOP LAYOUT ────────────────
+
+  Widget _buildDesktopLayout(DataProvider dataProvider, AuthProvider authProvider, bool isAdmin) {
+    return Row(
+      children: [
+        // Left panel: Sections / Salas
+        SizedBox(
+          width: 260,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              border: Border(right: BorderSide(color: Colors.grey.shade300)),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo.shade50,
+                  ),
+                  child: Text(
+                    'Salas Disponibles',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.indigo.shade700,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: SectionListWidget(
+                    sections: dataProvider.sections,
+                    selectedModule: _selectedModule,
+                    onModuleSelected: (module) {
+                      setState(() => _selectedModule = module);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Center panel: Main content
+        Expanded(
+          flex: 3,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: _buildMainContent(authProvider),
+          ),
+        ),
+        // Right panel: Calendar
+        SizedBox(
+          width: 320,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              border: Border(left: BorderSide(color: Colors.grey.shade300)),
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: [
+                  CalendarWidget(
+                    selectedDay: _selectedDay,
+                    focusedDay: _focusedDay,
+                    onDaySelected: (selectedDay, focusedDay) {
+                      setState(() {
+                        _selectedDay = selectedDay;
+                        _focusedDay = focusedDay;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  if (isAdmin)
+                    Card(
+                      color: Colors.indigo.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.indigo.shade700, size: 20),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text(
+                                'Modo TI Activo.\nLas solicitudes se muestran en tiempo real.',
+                                style: TextStyle(
+                                  color: Colors.indigo,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMainContent(AuthProvider authProvider) {
     if (authProvider.isAdmin) {
-      return Column(
+      return const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Solicitudes Pendientes de TI', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          const Expanded(child: AdminRequestList()),
+          Text(
+            'Solicitudes Pendientes',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 16),
+          Expanded(child: AdminRequestList()),
         ],
       );
     }
 
     if (_selectedModule == null) {
-      return const Center(child: Text('Selecciona una de las salas a la izquierda.'));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.meeting_room, size: 80, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            Text(
+              'Selecciona una sala para ver sus detalles',
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      );
     }
 
     return ModuleDetailWidget(
@@ -152,6 +452,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final finalRequest = Request(
             id: request.id,
             userId: authProvider.currentUser?.id ?? 'unknown',
+            userName: authProvider.currentUser?.username ?? '',
             moduleId: request.moduleId,
             date: request.date,
             time: request.time,
@@ -160,7 +461,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
           Provider.of<RequestProvider>(context, listen: false).addRequest(finalRequest);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Solicitud enviada exitosamente.'), backgroundColor: Colors.green)
+            const SnackBar(
+              content: Text('Solicitud enviada exitosamente.'),
+              backgroundColor: Colors.green,
+            ),
           );
         },
       ),

@@ -13,7 +13,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
   final _confirmPasswordController = TextEditingController();
 
   bool _isLoading = false;
@@ -70,16 +69,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Registro Exitoso'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green),
+              SizedBox(width: 8),
+              Text('Registro Exitoso'),
+            ],
+          ),
           content: const Text(
-            'Tu cuenta ha sido creada con éxito. Ahora puedes volver a la pantalla de inicio para entrar con tus credenciales.',
+            'Tu cuenta ha sido creada con éxito. Se ha enviado un correo de verificación. Tienes 15 minutos para confirmar tu cuenta y poder iniciar sesión.',
           ),
           actions: [
-            TextButton(
+            ElevatedButton(
               onPressed: () {
                 Navigator.of(ctx).pop();
                 Navigator.of(context).pop();
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.indigo,
+                foregroundColor: Colors.white,
+              ),
               child: const Text('Entendido'),
             ),
           ],
@@ -100,83 +110,123 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Crear una cuenta'),
+        backgroundColor: Colors.indigo.shade700,
+        foregroundColor: Colors.white,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Nombre completo',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.person),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextField(
+                    controller: _nameController,
+                    decoration: InputDecoration(
+                      labelText: 'Nombre completo',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      prefixIcon: const Icon(Icons.person),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      labelText: 'Correo electrónico',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      prefixIcon: const Icon(Icons.email),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword, 
+                    decoration: InputDecoration(
+                      labelText: 'Contraseña',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      prefixIcon: const Icon(Icons.lock),
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _confirmPasswordController,
+                    obscureText: _obscureConfirmPassword, 
+                    decoration: InputDecoration(
+                      labelText: 'Confirmar Contraseña',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      prefixIcon: const Icon(Icons.lock),
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscureConfirmPassword ? Icons.visibility_off : Icons.visibility),
+                        onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Role selector
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Selecciona tu rol:',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<String>(
+                          segments: const [
+                            ButtonSegment(value: 'docente', label: Text('Docente'), icon: Icon(Icons.school)),
+                            ButtonSegment(value: 'ti', label: Text('Depto. TI'), icon: Icon(Icons.computer)),
+                          ],
+                          selected: {_selectedRole},
+                          onSelectionChanged: (Set<String> newSelection) {
+                            setState(() => _selectedRole = newSelection.first);
+                          },
+                          style: ButtonStyle(
+                            shape: WidgetStateProperty.all(
+                              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+                  SizedBox(
+                    width: double.infinity, 
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: _isLoading ? null : _register,
+                      icon: _isLoading 
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Icon(Icons.person_add),
+                      label: const Text('Registrar', style: TextStyle(fontSize: 16)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.indigo,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'Correo electrónico',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.email),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-            TextField(
-              controller: _passwordController,
-              obscureText: _obscurePassword, 
-              decoration: InputDecoration(
-                labelText: 'Contraseña',
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.lock),
-                suffixIcon: IconButton(
-                  icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _confirmPasswordController,
-              obscureText: _obscureConfirmPassword, 
-              decoration: InputDecoration(
-                labelText: 'Confirmar Contraseña',
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.lock),
-                suffixIcon: IconButton(
-                  icon: Icon(_obscureConfirmPassword ? Icons.visibility_off : Icons.visibility),
-                  onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'docente', label: Text('Docente'), icon: Icon(Icons.school)),
-                ButtonSegment(value: 'ti', label: Text('Departamento TI'), icon: Icon(Icons.computer)),
-              ],
-              selected: {_selectedRole},
-              onSelectionChanged: (Set<String> newSelection) {
-                setState(() => _selectedRole = newSelection.first);
-              },
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity, 
-              height: 48,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _register,
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo),
-                child: _isLoading 
-                    ? const CircularProgressIndicator(color: Colors.white) 
-                    : const Text('Registrar', style: TextStyle(color: Colors.white)),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

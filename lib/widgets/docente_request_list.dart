@@ -4,13 +4,18 @@ import 'package:intl/intl.dart';
 import '../providers/request_provider.dart';
 import '../models/request.dart';
 
-class AdminRequestList extends StatelessWidget {
-  const AdminRequestList({super.key});
+/// Widget that shows the docente's own requests with options to edit/delete pending ones.
+class DocenteRequestList extends StatelessWidget {
+  final String userId;
+
+  const DocenteRequestList({super.key, required this.userId});
 
   @override
   Widget build(BuildContext context) {
     final requestProvider = Provider.of<RequestProvider>(context);
-    final requests = requestProvider.requests;
+    final requests = requestProvider.requests
+        .where((r) => r.userId == userId)
+        .toList();
 
     if (requests.isEmpty) {
       return Center(
@@ -20,7 +25,7 @@ class AdminRequestList extends StatelessWidget {
             Icon(Icons.inbox_outlined, size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 12),
             Text(
-              'No hay solicitudes pendientes.',
+              'No tienes solicitudes aún',
               style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
             ),
           ],
@@ -74,7 +79,6 @@ class AdminRequestList extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header row: Type + Status badge
             Row(
               children: [
                 Expanded(
@@ -112,14 +116,17 @@ class AdminRequestList extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            // Info rows
-            _buildInfoRow(Icons.person, 'Solicitante: ${request.userName.isNotEmpty ? request.userName : request.userId}'),
+            const SizedBox(height: 8),
+            Text(
+              'Sala: ${request.moduleId}',
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+            ),
             const SizedBox(height: 4),
-            _buildInfoRow(Icons.meeting_room, 'Sala: ${request.moduleId}'),
+            Text(
+              'Fecha: ${DateFormat('dd/MM/yyyy').format(request.date)} a las ${request.time}',
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+            ),
             const SizedBox(height: 4),
-            _buildInfoRow(Icons.calendar_today, 'Fecha: ${DateFormat('dd/MM/yyyy').format(request.date)} a las ${request.time}'),
-            const SizedBox(height: 6),
             Text(
               request.description,
               style: const TextStyle(fontSize: 13),
@@ -127,7 +134,7 @@ class AdminRequestList extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             if (request.adminComment != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -141,40 +148,26 @@ class AdminRequestList extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        request.adminComment!,
-                        style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 13),
+                        'TI: ${request.adminComment}',
+                        style: const TextStyle(
+                          fontStyle: FontStyle.italic,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
             ],
-            // Action buttons for pending requests
             if (isPending) ...[
               const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: () => _showActionDialog(context, request, RequestStatus.rejected),
-                    icon: const Icon(Icons.close, size: 18),
-                    label: const Text('Rechazar', style: TextStyle(fontSize: 13)),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: () => _showActionDialog(context, request, RequestStatus.accepted),
-                    icon: const Icon(Icons.check, size: 18),
-                    label: const Text('Aceptar', style: TextStyle(fontSize: 13)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
+                  TextButton.icon(
+                    onPressed: () => _confirmDelete(context, request),
+                    icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                    label: const Text('Eliminar', style: TextStyle(color: Colors.red, fontSize: 13)),
                   ),
                 ],
               ),
@@ -185,66 +178,34 @@ class AdminRequestList extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 15, color: Colors.grey.shade600),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showActionDialog(BuildContext context, Request request, RequestStatus status) {
-    final controller = TextEditingController();
+  void _confirmDelete(BuildContext context, Request request) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(
-              status == RequestStatus.accepted ? Icons.check_circle : Icons.cancel,
-              color: status == RequestStatus.accepted ? Colors.green : Colors.red,
-            ),
-            const SizedBox(width: 8),
-            Text(status == RequestStatus.accepted ? 'Aceptar Solicitud' : 'Rechazar Solicitud'),
-          ],
-        ),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: 'Comentario (Opcional)',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-          maxLines: 2,
-        ),
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar Solicitud'),
+        content: const Text('¿Estás seguro de que deseas eliminar esta solicitud?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
             onPressed: () {
-              Provider.of<RequestProvider>(context, listen: false).updateRequestStatus(
-                request.id,
-                status,
-                comment: controller.text.isNotEmpty ? controller.text : null,
+              Provider.of<RequestProvider>(context, listen: false)
+                  .deleteRequest(request.id);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Solicitud eliminada'),
+                  backgroundColor: Colors.orange,
+                ),
               );
-              Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: status == RequestStatus.accepted ? Colors.green : Colors.red,
+              backgroundColor: Colors.red,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Confirmar'),
+            child: const Text('Eliminar'),
           ),
         ],
       ),
