@@ -1,16 +1,18 @@
-enum UserRole { user, it }
+enum UserRole { user, it, admin }
 
 class User {
   final String id;
   final String username;
   final String email;
   final UserRole role;
+  final String? fcmToken;
 
   User({
     required this.id,
     required this.username,
     required this.email,
     required this.role,
+    this.fcmToken,
   });
 
   User copyWith({
@@ -18,30 +20,49 @@ class User {
     String? username,
     String? email,
     UserRole? role,
+    String? fcmToken,
   }) {
     return User(
       id: id ?? this.id,
       username: username ?? this.username,
       email: email ?? this.email,
       role: role ?? this.role,
+      fcmToken: fcmToken ?? this.fcmToken,
     );
   }
 
   Map<String, dynamic> toMap() {
+    String roleStr;
+    if (role == UserRole.it) {
+      roleStr = 'ti';
+    } else if (role == UserRole.admin) {
+      roleStr = 'admin';
+    } else {
+      roleStr = 'docente';
+    }
+
     return {
       'uid': id,
       'username': username,
       'email': email,
-      'role': role == UserRole.it ? 'ti' : 'docente',
+      'role': roleStr,
+      if (fcmToken != null) 'fcmToken': fcmToken,
     };
   }
 
   factory User.fromMap(Map<String, dynamic> map) {
+    UserRole parseRole(String? role) {
+      if (role == 'ti') return UserRole.it;
+      if (role == 'admin') return UserRole.admin;
+      return UserRole.user;
+    }
+
     return User(
       id: map['uid'] ?? '',
       username: map['username'] ?? '',
       email: map['email'] ?? '',
-      role: map['role'] == 'ti' ? UserRole.it : UserRole.user,
+      role: parseRole(map['role']),
+      fcmToken: map['fcmToken'],
     );
   }
 }

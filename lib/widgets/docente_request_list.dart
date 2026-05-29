@@ -3,8 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/request_provider.dart';
 import '../models/request.dart';
+import '../models/module.dart';
+import '../widgets/request_form_dialog.dart';
+import '../providers/data_provider.dart';
 
-/// Widget that shows the docente's own requests with options to edit/delete pending ones.
+
 class DocenteRequestList extends StatelessWidget {
   final String userId;
 
@@ -133,6 +136,15 @@ class DocenteRequestList extends StatelessWidget {
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
+            if (request.imageUrl != null) ...[
+              const SizedBox(height: 10),
+              const Text('Mi Evidencia:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(request.imageUrl!, height: 120, width: double.infinity, fit: BoxFit.cover),
+              ),
+            ],
             if (request.adminComment != null) ...[
               const SizedBox(height: 6),
               Container(
@@ -159,11 +171,26 @@ class DocenteRequestList extends StatelessWidget {
                 ),
               ),
             ],
+            if (request.adminImageUrl != null) ...[
+              const SizedBox(height: 10),
+              const Text('Evidencia TI:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(request.adminImageUrl!, height: 120, width: double.infinity, fit: BoxFit.cover),
+              ),
+            ],
             if (isPending) ...[
               const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  TextButton.icon(
+                    onPressed: () => _editRequest(context, request),
+                    icon: const Icon(Icons.edit, size: 18, color: Colors.blue),
+                    label: const Text('Editar', style: TextStyle(color: Colors.blue, fontSize: 13)),
+                  ),
+                  const SizedBox(width: 8),
                   TextButton.icon(
                     onPressed: () => _confirmDelete(context, request),
                     icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
@@ -208,6 +235,40 @@ class DocenteRequestList extends StatelessWidget {
             child: const Text('Eliminar'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _editRequest(BuildContext context, Request request) {
+    final dataProvider = Provider.of<DataProvider>(context, listen: false);
+    
+    
+    Module? foundModule;
+    for (var section in dataProvider.sections) {
+      for (var mod in section.modules) {
+        if (mod.id == request.moduleId) {
+          foundModule = mod;
+          break;
+        }
+      }
+    }
+    
+    final module = foundModule ?? Module(id: request.moduleId, name: 'Sala desconocida', sectionName: '', programs: []);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => RequestFormDialog(
+        module: module,
+        date: request.date,
+        requestToEdit: request,
+        onSubmit: (updatedRequest) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Solicitud actualizada correctamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
       ),
     );
   }

@@ -1,7 +1,12 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/request.dart';
+import '../services/notification_service.dart';
 
 class RequestProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -10,7 +15,7 @@ class RequestProvider with ChangeNotifier {
 
   List<Request> get requests => _requests;
 
-  /// Listen to all requests in real-time (for TI admin view)
+  
   void listenAllRequests() {
     _subscription?.cancel();
     _subscription = _firestore
@@ -18,6 +23,17 @@ class RequestProvider with ChangeNotifier {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .listen((snapshot) {
+      for (var change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          
+          final req = Request.fromMap(change.doc.id, change.doc.data()!);
+          NotificationService().showNotification(
+            id: req.id.hashCode,
+            title: 'Nueva Solicitud',
+            body: 'El docente ${req.userName} ha enviado una solicitud.',
+          );
+        }
+      }
       _requests = snapshot.docs
           .map((doc) => Request.fromMap(doc.id, doc.data()))
           .toList();
@@ -25,7 +41,7 @@ class RequestProvider with ChangeNotifier {
     });
   }
 
-  /// Listen to requests for a specific user (docente view)
+  
   void listenUserRequests(String userId) {
     _subscription?.cancel();
     _subscription = _firestore
@@ -34,6 +50,19 @@ class RequestProvider with ChangeNotifier {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .listen((snapshot) {
+      for (var change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.modified) {
+          final req = Request.fromMap(change.doc.id, change.doc.data()!);
+          if (req.status != RequestStatus.pending) {
+            String statusStr = req.status == RequestStatus.accepted ? 'Aceptada' : 'Rechazada';
+            NotificationService().showNotification(
+              id: req.id.hashCode,
+              title: 'Solicitud $statusStr',
+              body: 'Tu solicitud ha sido $statusStr por el departamento TI.',
+            );
+          }
+        }
+      }
       _requests = snapshot.docs
           .map((doc) => Request.fromMap(doc.id, doc.data()))
           .toList();
@@ -41,25 +70,53 @@ class RequestProvider with ChangeNotifier {
     });
   }
 
-  /// Create a new request in Firestore
+  
   Future<void> addRequest(Request request) async {
     await _firestore.collection('requests').add(request.toMap());
   }
 
-  /// Update request status (accept/reject by TI)
-  Future<void> updateRequestStatus(String requestId, RequestStatus status, {String? comment}) async {
+  
+  Future<void> updateRequestStatus(String requestId, RequestStatus status, {String? comment, String? adminImageUrl}) async {
     await _firestore.collection('requests').doc(requestId).update({
       'status': status.name,
       'adminComment': comment,
+      if (adminImageUrl != null) 'adminImageUrl': adminImageUrl,
     });
   }
 
-  /// Delete a request from Firestore
+  
+  Future<String?> uploadImage(Uint8List bytes, String folder) async {
+    try {
+      final base64Image = base64Encode(bytes);
+
+      
+      const apiKey = '06222bfae6f4afef6856dff2e1183307';
+      final url = Uri.parse('https://api.imgbb.com/1/upload');
+
+      final response = await http.post(url, body: {
+        'key': apiKey,
+        'image': base64Image,
+      });
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        return jsonResponse['data']['url'];
+      } else {
+        debugPrint('Error from ImgBB: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error uploading image to ImgBB: $e');
+      return null;
+    }
+  }
+
+  
   Future<void> deleteRequest(String requestId) async {
     await _firestore.collection('requests').doc(requestId).delete();
   }
 
-  /// Update an existing request in Firestore
+  
   Future<void> updateRequest(Request request) async {
     await _firestore.collection('requests').doc(request.id).update({
       'moduleId': request.moduleId,

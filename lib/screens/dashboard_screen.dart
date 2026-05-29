@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/data_provider.dart';
 import '../providers/request_provider.dart';
+import '../providers/theme_provider.dart';
 import '../models/module.dart';
 import '../models/request.dart';
 import '../widgets/calendar_widget.dart';
@@ -30,7 +31,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize Firestore listeners after the first frame
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initListeners();
     });
@@ -83,6 +84,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
       foregroundColor: Colors.white,
       elevation: 2,
       actions: [
+        if (authProvider.isRealAdmin && authProvider.simulatedRole != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Tooltip(
+              message: 'Volver a Administrador',
+              child: IconButton(
+                icon: const Icon(Icons.exit_to_app),
+                color: Colors.orange.shade300,
+                onPressed: () {
+                  authProvider.simulateRole(null);
+                },
+              ),
+            ),
+          ),
+        Consumer<ThemeProvider>(
+          builder: (context, themeProvider, child) {
+            return Switch(
+              value: themeProvider.isDarkMode,
+              onChanged: (value) {
+                themeProvider.toggleTheme(value);
+              },
+              activeColor: Colors.indigo,
+              activeTrackColor: Colors.indigo.shade200,
+              inactiveThumbColor: Colors.white,
+              inactiveTrackColor: Colors.indigo.shade300,
+            );
+          },
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Center(
@@ -123,11 +152,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       color: Colors.white70,
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      authProvider.currentUser?.username ?? '',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 80),
+                      child: Text(
+                        authProvider.currentUser?.username ?? '',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -152,17 +185,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ──────────────── MOBILE LAYOUT ────────────────
+  
 
   Widget _buildMobileLayout(DataProvider dataProvider, AuthProvider authProvider, bool isAdmin) {
     if (isAdmin) {
-      return _buildMobileAdminLayout(authProvider);
+      return _buildMobileAdminLayout(dataProvider, authProvider);
     } else {
       return _buildMobileDocenteLayout(dataProvider, authProvider);
     }
   }
 
-  Widget _buildMobileAdminLayout(AuthProvider authProvider) {
+  Widget _buildMobileAdminLayout(DataProvider dataProvider, AuthProvider authProvider) {
     switch (_mobileTabIndex) {
       case 0:
         return const Padding(
@@ -170,6 +203,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: AdminRequestList(),
         );
       case 1:
+        return Scaffold(
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () => _showAddModuleDialog(context),
+            icon: const Icon(Icons.add),
+            label: const Text('Nueva Sala'),
+            backgroundColor: Colors.indigo,
+            foregroundColor: Colors.white,
+          ),
+          body: SectionListWidget(
+            sections: dataProvider.sections,
+            selectedModule: _selectedModule,
+            isAdmin: true,
+            onModuleSelected: (module) {
+              setState(() {
+                _selectedModule = module;
+                _mobileTabIndex = 2;
+              });
+            },
+          ),
+        );
+      case 2:
+        return _selectedModule != null
+            ? Padding(
+                padding: const EdgeInsets.all(16),
+                child: ModuleDetailWidget(
+                  module: _selectedModule!,
+                  onRequestCreated: () => _showRequestForm(context, authProvider),
+                ),
+              )
+            : Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.touch_app, size: 64, color: Colors.grey.shade400),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Selecciona una sala primero',
+                      style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              );
+      case 3:
         return Padding(
           padding: const EdgeInsets.all(16),
           child: CalendarWidget(
@@ -266,6 +342,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             label: 'Solicitudes',
           ),
           NavigationDestination(
+            icon: Icon(Icons.meeting_room_outlined),
+            selectedIcon: Icon(Icons.meeting_room, color: Colors.indigo),
+            label: 'Salas',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.computer_outlined),
+            selectedIcon: Icon(Icons.computer, color: Colors.indigo),
+            label: 'Detalle',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.calendar_month),
             selectedIcon: Icon(Icons.calendar_month, color: Colors.indigo),
             label: 'Calendario',
@@ -299,12 +385,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ──────────────── DESKTOP LAYOUT ────────────────
+  
 
   Widget _buildDesktopLayout(DataProvider dataProvider, AuthProvider authProvider, bool isAdmin) {
     return Row(
       children: [
-        // Left panel: Sections / Salas
+        
         SizedBox(
           width: 260,
           child: Container(
@@ -320,19 +406,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   decoration: BoxDecoration(
                     color: Colors.indigo.shade50,
                   ),
-                  child: Text(
-                    'Salas Disponibles',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.indigo.shade700,
-                    ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Salas Disponibles',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.indigo.shade700,
+                        ),
+                      ),
+                      if (isAdmin)
+                        IconButton(
+                          icon: const Icon(Icons.add_circle, color: Colors.indigo),
+                          tooltip: 'Añadir Sala',
+                          onPressed: () => _showAddModuleDialog(context),
+                        ),
+                    ],
                   ),
                 ),
                 Expanded(
                   child: SectionListWidget(
                     sections: dataProvider.sections,
                     selectedModule: _selectedModule,
+                    isAdmin: isAdmin,
                     onModuleSelected: (module) {
                       setState(() => _selectedModule = module);
                     },
@@ -342,7 +440,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ),
-        // Center panel: Main content
+        
         Expanded(
           flex: 3,
           child: Padding(
@@ -350,7 +448,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: _buildMainContent(authProvider),
           ),
         ),
-        // Right panel: Calendar
+        
         SizedBox(
           width: 320,
           child: Container(
@@ -407,6 +505,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildMainContent(AuthProvider authProvider) {
     if (authProvider.isAdmin) {
+      if (_selectedModule != null) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.indigo),
+                  onPressed: () => setState(() => _selectedModule = null),
+                ),
+                const Text(
+                  'Volver a Solicitudes',
+                  style: TextStyle(fontSize: 16, color: Colors.indigo, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const Divider(),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ModuleDetailWidget(
+                module: _selectedModule!,
+                onRequestCreated: () => _showRequestForm(context, authProvider),
+              ),
+            ),
+          ],
+        );
+      }
+
       return const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -467,6 +593,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _showAddModuleDialog(BuildContext context) {
+    final nameController = TextEditingController();
+    final sectionController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Añadir Nueva Sala'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Nombre de la Sala (ej. Sala 301)'),
+                validator: (v) => v!.isEmpty ? 'Requerido' : null,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: sectionController,
+                decoration: const InputDecoration(labelText: 'Sección o Piso (ej. Piso 3)'),
+                validator: (v) => v!.isEmpty ? 'Requerido' : null,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Nota: Si la sección no existe, se creará automáticamente.',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              )
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Provider.of<DataProvider>(context, listen: false).addModule(
+                  nameController.text.trim(),
+                  sectionController.text.trim(),
+                );
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
       ),
     );
   }

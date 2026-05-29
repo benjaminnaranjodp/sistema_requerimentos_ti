@@ -13,6 +13,8 @@ class Request {
   final String description;
   RequestStatus status;
   String? adminComment;
+  final String? imageUrl;
+  String? adminImageUrl;
 
   Request({
     required this.id,
@@ -25,6 +27,8 @@ class Request {
     required this.description,
     this.status = RequestStatus.pending,
     this.adminComment,
+    this.imageUrl,
+    this.adminImageUrl,
   });
 
   Map<String, dynamic> toMap() {
@@ -38,6 +42,8 @@ class Request {
       'description': description,
       'status': status.name,
       'adminComment': adminComment,
+      'imageUrl': imageUrl,
+      'adminImageUrl': adminImageUrl,
       'createdAt': FieldValue.serverTimestamp(),
     };
   }
@@ -65,6 +71,8 @@ class Request {
       description: map['description'] ?? '',
       status: parseStatus(map['status']),
       adminComment: map['adminComment'],
+      imageUrl: map['imageUrl'],
+      adminImageUrl: map['adminImageUrl'],
     );
   }
 }

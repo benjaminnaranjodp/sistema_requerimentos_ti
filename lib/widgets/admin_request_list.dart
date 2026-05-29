@@ -1,6 +1,8 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 import '../providers/request_provider.dart';
 import '../models/request.dart';
 
@@ -10,8 +12,41 @@ class AdminRequestList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final requestProvider = Provider.of<RequestProvider>(context);
-    final requests = requestProvider.requests;
+    final allRequests = requestProvider.requests;
 
+    final pendingRequests = allRequests.where((r) => r.status == RequestStatus.pending).toList();
+    final historyRequests = allRequests.where((r) => r.status != RequestStatus.pending).toList();
+
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          Container(
+            color: Colors.white,
+            child: const TabBar(
+              labelColor: Colors.indigo,
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: Colors.indigo,
+              tabs: [
+                Tab(text: 'Pendientes'),
+                Tab(text: 'Historial'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildList(pendingRequests, 'No hay solicitudes pendientes.'),
+                _buildList(historyRequests, 'No hay historial de solicitudes.'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildList(List<Request> requests, String emptyMessage) {
     if (requests.isEmpty) {
       return Center(
         child: Column(
@@ -20,7 +55,7 @@ class AdminRequestList extends StatelessWidget {
             Icon(Icons.inbox_outlined, size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 12),
             Text(
-              'No hay solicitudes pendientes.',
+              emptyMessage,
               style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
             ),
           ],
@@ -29,10 +64,10 @@ class AdminRequestList extends StatelessWidget {
     }
 
     return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: requests.length,
       itemBuilder: (context, index) {
-        final request = requests[index];
-        return _buildRequestCard(context, request);
+        return _buildRequestCard(context, requests[index]);
       },
     );
   }
@@ -63,7 +98,7 @@ class AdminRequestList extends StatelessWidget {
     }
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6),
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
       elevation: 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -74,7 +109,7 @@ class AdminRequestList extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header row: Type + Status badge
+            
             Row(
               children: [
                 Expanded(
@@ -113,7 +148,7 @@ class AdminRequestList extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            // Info rows
+            
             _buildInfoRow(Icons.person, 'Solicitante: ${request.userName.isNotEmpty ? request.userName : request.userId}'),
             const SizedBox(height: 4),
             _buildInfoRow(Icons.meeting_room, 'Sala: ${request.moduleId}'),
@@ -126,8 +161,19 @@ class AdminRequestList extends StatelessWidget {
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
+            
+            if (request.imageUrl != null) ...[
+              const SizedBox(height: 10),
+              const Text('Evidencia del Docente:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(request.imageUrl!, height: 120, width: double.infinity, fit: BoxFit.cover),
+              ),
+            ],
+
             if (request.adminComment != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -149,9 +195,20 @@ class AdminRequestList extends StatelessWidget {
                 ),
               ),
             ],
-            // Action buttons for pending requests
-            if (isPending) ...[
+
+            if (request.adminImageUrl != null) ...[
               const SizedBox(height: 10),
+              const Text('Evidencia TI:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(request.adminImageUrl!, height: 120, width: double.infinity, fit: BoxFit.cover),
+              ),
+            ],
+
+            
+            if (isPending) ...[
+              const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -203,50 +260,118 @@ class AdminRequestList extends StatelessWidget {
 
   void _showActionDialog(BuildContext context, Request request, RequestStatus status) {
     final controller = TextEditingController();
+    bool isUploading = false;
+    XFile? selectedImage;
+    Uint8List? selectedImageBytes;
+    final ImagePicker picker = ImagePicker();
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(
-              status == RequestStatus.accepted ? Icons.check_circle : Icons.cancel,
-              color: status == RequestStatus.accepted ? Colors.green : Colors.red,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                Icon(
+                  status == RequestStatus.accepted ? Icons.check_circle : Icons.cancel,
+                  color: status == RequestStatus.accepted ? Colors.green : Colors.red,
+                ),
+                const SizedBox(width: 8),
+                Text(status == RequestStatus.accepted ? 'Aceptar Solicitud' : 'Rechazar Solicitud'),
+              ],
             ),
-            const SizedBox(width: 8),
-            Text(status == RequestStatus.accepted ? 'Aceptar Solicitud' : 'Rechazar Solicitud'),
-          ],
-        ),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: 'Comentario (Opcional)',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-          maxLines: 2,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Provider.of<RequestProvider>(context, listen: false).updateRequestStatus(
-                request.id,
-                status,
-                comment: controller.text.isNotEmpty ? controller.text : null,
-              );
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: status == RequestStatus.accepted ? Colors.green : Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      labelText: 'Comentario (Opcional)',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 16),
+                  if (selectedImage != null && selectedImageBytes != null)
+                    Stack(
+                      alignment: Alignment.topRight,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.memory(selectedImageBytes!, height: 100, width: double.infinity, fit: BoxFit.cover),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.cancel, color: Colors.red),
+                          onPressed: () => setState(() {
+                            selectedImage = null;
+                            selectedImageBytes = null;
+                          }),
+                        ),
+                      ],
+                    )
+                  else
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+                        if (image != null) {
+                          final bytes = await image.readAsBytes();
+                          setState(() {
+                            selectedImage = image;
+                            selectedImageBytes = bytes;
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.image),
+                      label: const Text('Adjuntar Evidencia'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(40),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                ],
+              ),
             ),
-            child: const Text('Confirmar'),
-          ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: isUploading ? null : () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: isUploading ? null : () async {
+                  setState(() => isUploading = true);
+                  String? adminImageUrl;
+                  
+                  if (selectedImage != null) {
+                    final reqProvider = Provider.of<RequestProvider>(context, listen: false);
+                    final bytes = await selectedImage!.readAsBytes();
+                    adminImageUrl = await reqProvider.uploadImage(bytes, 'admin_images');
+                  }
+
+                  if (context.mounted) {
+                    await Provider.of<RequestProvider>(context, listen: false).updateRequestStatus(
+                      request.id,
+                      status,
+                      comment: controller.text.isNotEmpty ? controller.text : null,
+                      adminImageUrl: adminImageUrl,
+                    );
+                    Navigator.pop(context);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: status == RequestStatus.accepted ? Colors.green : Colors.red,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: isUploading 
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('Confirmar'),
+              ),
+            ],
+          );
+        }
       ),
     );
   }
