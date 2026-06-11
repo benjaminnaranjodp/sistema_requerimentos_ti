@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/auth_provider.dart';
 import '../providers/request_provider.dart';
 import '../providers/data_provider.dart';
+import '../providers/network_provider.dart';
 import '../models/user.dart';
 import '../models/request.dart';
 import '../models/module.dart';
@@ -42,6 +43,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       appBar: AppBar(
         title: const Text('Panel de Administrador'),
         actions: [
+          Consumer<NetworkProvider>(
+            builder: (context, networkProvider, child) {
+              final isOffline = networkProvider.isOffline;
+              return Tooltip(
+                message: isOffline ? 'Sin conexión (Modo Offline)' : 'Conectado a Internet',
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isOffline ? Colors.grey : Colors.greenAccent,
+                    boxShadow: [
+                      if (!isOffline)
+                        BoxShadow(
+                          color: Colors.greenAccent.withOpacity(0.5),
+                          blurRadius: 6,
+                          spreadRadius: 1,
+                        )
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
           PopupMenuButton<UserRole>(
             tooltip: 'Simular vista (Ver como...)',
             icon: const Icon(Icons.remove_red_eye),

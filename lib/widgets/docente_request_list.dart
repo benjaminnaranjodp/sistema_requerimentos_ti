@@ -16,10 +16,43 @@ class DocenteRequestList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final requestProvider = Provider.of<RequestProvider>(context);
-    final requests = requestProvider.requests
+    final allRequests = requestProvider.requests
         .where((r) => r.userId == userId)
         .toList();
 
+    final pendingRequests = allRequests.where((r) => r.status == RequestStatus.pending || r.status == RequestStatus.offlinePending).toList();
+    final historyRequests = allRequests.where((r) => r.status == RequestStatus.accepted || r.status == RequestStatus.rejected).toList();
+
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          Container(
+            color: Theme.of(context).cardColor,
+            child: TabBar(
+              labelColor: Theme.of(context).colorScheme.primary,
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: Theme.of(context).colorScheme.primary,
+              tabs: const [
+                Tab(text: 'Pendientes'),
+                Tab(text: 'Historial'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildList(pendingRequests, 'No tienes solicitudes pendientes.'),
+                _buildList(historyRequests, 'No tienes historial de solicitudes.'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildList(List<Request> requests, String emptyMessage) {
     if (requests.isEmpty) {
       return Center(
         child: Column(
@@ -28,7 +61,7 @@ class DocenteRequestList extends StatelessWidget {
             Icon(Icons.inbox_outlined, size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 12),
             Text(
-              'No tienes solicitudes aún',
+              emptyMessage,
               style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
             ),
           ],
@@ -57,6 +90,11 @@ class DocenteRequestList extends StatelessWidget {
         statusColor = Colors.orange;
         statusIcon = Icons.hourglass_empty;
         statusText = 'Pendiente';
+        break;
+      case RequestStatus.offlinePending:
+        statusColor = Colors.blueGrey;
+        statusIcon = Icons.cloud_off;
+        statusText = 'Pendiente de envío';
         break;
       case RequestStatus.accepted:
         statusColor = Colors.green;

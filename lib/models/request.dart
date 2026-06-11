@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum RequestStatus { pending, accepted, rejected }
+enum RequestStatus { pending, accepted, rejected, offlinePending }
 
 class Request {
   final String id;
@@ -55,6 +55,8 @@ class Request {
           return RequestStatus.accepted;
         case 'rejected':
           return RequestStatus.rejected;
+        case 'offlinePending':
+          return RequestStatus.offlinePending;
         default:
           return RequestStatus.pending;
       }

@@ -6,6 +6,7 @@ class User {
   final String email;
   final UserRole role;
   final String? fcmToken;
+  final bool isDarkMode;
 
   User({
     required this.id,
@@ -13,6 +14,7 @@ class User {
     required this.email,
     required this.role,
     this.fcmToken,
+    this.isDarkMode = false,
   });
 
   User copyWith({
@@ -21,6 +23,7 @@ class User {
     String? email,
     UserRole? role,
     String? fcmToken,
+    bool? isDarkMode,
   }) {
     return User(
       id: id ?? this.id,
@@ -28,6 +31,7 @@ class User {
       email: email ?? this.email,
       role: role ?? this.role,
       fcmToken: fcmToken ?? this.fcmToken,
+      isDarkMode: isDarkMode ?? this.isDarkMode,
     );
   }
 
@@ -47,6 +51,7 @@ class User {
       'email': email,
       'role': roleStr,
       if (fcmToken != null) 'fcmToken': fcmToken,
+      'isDarkMode': isDarkMode,
     };
   }
 
@@ -63,6 +68,7 @@ class User {
       email: map['email'] ?? '',
       role: parseRole(map['role']),
       fcmToken: map['fcmToken'],
+      isDarkMode: map['isDarkMode'] ?? false,
     );
   }
 }

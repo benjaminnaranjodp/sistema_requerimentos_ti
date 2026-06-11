@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/database_helper.dart';
 import '../models/section.dart';
 import '../models/module.dart';
 
@@ -16,17 +18,39 @@ class DataProvider with ChangeNotifier {
   }
 
   void _listenToModules() {
-    _subscription = _firestore.collection('modules').snapshots().listen((snapshot) {
+    _subscription = _firestore.collection('modules').snapshots().listen((snapshot) async {
       if (snapshot.docs.isEmpty) {
+        final cached = await DatabaseHelper().getModulesCache();
+        if (cached.isNotEmpty) {
+          _processModules(cached.map((e) => jsonDecode(e['data'] as String) as Map<String, dynamic>).toList());
+          return;
+        }
         seedDefaultData();
         return;
       }
+      
+      final dataList = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+      
+      await DatabaseHelper().saveModulesCache(dataList);
+      _processModules(dataList);
+    }, onError: (error) async {
+      final cached = await DatabaseHelper().getModulesCache();
+      if (cached.isNotEmpty) {
+        _processModules(cached.map((e) => jsonDecode(e['data'] as String) as Map<String, dynamic>).toList());
+      }
+    });
+  }
 
-      
-      final Map<String, List<Module>> grouped = {};
-      
-      for (var doc in snapshot.docs) {
-        final module = Module.fromMap(doc.id, doc.data());
+  void _processModules(List<Map<String, dynamic>> dataList) {
+    final Map<String, List<Module>> grouped = {};
+    
+    for (var doc in dataList) {
+      final id = doc['id'] as String;
+      final module = Module.fromMap(id, doc);
         if (!grouped.containsKey(module.sectionName)) {
           grouped[module.sectionName] = [];
         }
@@ -48,7 +72,6 @@ class DataProvider with ChangeNotifier {
       }
 
       notifyListeners();
-    });
   }
 
   Future<void> seedDefaultData() async {

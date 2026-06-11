@@ -22,12 +22,12 @@ class AdminRequestList extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            color: Colors.white,
-            child: const TabBar(
-              labelColor: Colors.indigo,
+            color: Theme.of(context).cardColor,
+            child: TabBar(
+              labelColor: Theme.of(context).colorScheme.primary,
               unselectedLabelColor: Colors.grey,
-              indicatorColor: Colors.indigo,
-              tabs: [
+              indicatorColor: Theme.of(context).colorScheme.primary,
+              tabs: const [
                 Tab(text: 'Pendientes'),
                 Tab(text: 'Historial'),
               ],
@@ -94,6 +94,11 @@ class AdminRequestList extends StatelessWidget {
         statusColor = Colors.red;
         statusIcon = Icons.cancel;
         statusText = 'Rechazada';
+        break;
+      case RequestStatus.offlinePending:
+        statusColor = Colors.blueGrey;
+        statusIcon = Icons.cloud_off;
+        statusText = 'Pendiente de envío';
         break;
     }
 

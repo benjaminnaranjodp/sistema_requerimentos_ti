@@ -39,28 +39,28 @@ class CalendarWidget extends StatelessWidget {
               color: Colors.indigo.withAlpha(50),
               shape: BoxShape.circle,
             ),
-            selectedDecoration: const BoxDecoration(
-              color: Colors.indigo,
+            selectedDecoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary,
               shape: BoxShape.circle,
             ),
-            defaultTextStyle: TextStyle(fontSize: isMobile ? 12 : 14),
+            defaultTextStyle: TextStyle(fontSize: isMobile ? 12 : 14, color: Theme.of(context).textTheme.bodyMedium?.color),
             weekendTextStyle: TextStyle(fontSize: isMobile ? 12 : 14, color: Colors.red.shade300),
             todayTextStyle: TextStyle(
               fontSize: isMobile ? 12 : 14,
               fontWeight: FontWeight.bold,
-              color: Colors.indigo,
+              color: Theme.of(context).colorScheme.primary,
             ),
             selectedTextStyle: TextStyle(
               fontSize: isMobile ? 12 : 14,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
             ),
           ),
           daysOfWeekStyle: DaysOfWeekStyle(
             weekdayStyle: TextStyle(
               fontSize: isMobile ? 11 : 13,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
+              color: Theme.of(context).textTheme.bodyMedium?.color?.withAlpha(150),
             ),
             weekendStyle: TextStyle(
               fontSize: isMobile ? 11 : 13,

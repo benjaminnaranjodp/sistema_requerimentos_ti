@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../models/request.dart';
+import '../providers/auth_provider.dart';
 import '../models/module.dart';
 import '../providers/request_provider.dart';
 
@@ -79,10 +80,13 @@ class _RequestFormDialogState extends State<RequestFormDialog> {
       imageUrl = await reqProvider.uploadImage(bytes, 'request_images');
     }
 
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUser = authProvider.currentUser;
+
     final request = Request(
       id: widget.requestToEdit?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      userId: widget.requestToEdit?.userId ?? 'current_user',
-      userName: widget.requestToEdit?.userName ?? '',
+      userId: widget.requestToEdit?.userId ?? currentUser?.id ?? 'unknown',
+      userName: widget.requestToEdit?.userName ?? currentUser?.username ?? 'Docente',
       moduleId: widget.module.id,
       date: widget.date,
       time: _time,
@@ -139,12 +143,16 @@ class _RequestFormDialogState extends State<RequestFormDialog> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.indigo.shade50,
+                    color: Theme.of(context).brightness == Brightness.dark 
+                        ? Theme.of(context).colorScheme.surface
+                        : Colors.indigo.shade50,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_today, color: Colors.indigo, size: 20),
+                      Icon(Icons.calendar_today, 
+                          color: Theme.of(context).brightness == Brightness.dark ? Colors.indigoAccent : Colors.indigo, 
+                          size: 20),
                       const SizedBox(width: 10),
                       Text(
                         DateFormat('dd/MM/yyyy').format(widget.date),

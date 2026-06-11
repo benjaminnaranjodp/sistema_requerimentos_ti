@@ -4,6 +4,7 @@ import '../providers/auth_provider.dart';
 import '../providers/data_provider.dart';
 import '../providers/request_provider.dart';
 import '../providers/theme_provider.dart';
+import '../providers/network_provider.dart';
 import '../models/module.dart';
 import '../models/request.dart';
 import '../widgets/calendar_widget.dart';
@@ -69,7 +70,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ? _buildMobileLayout(dataProvider, authProvider, isAdmin)
           : _buildDesktopLayout(dataProvider, authProvider, isAdmin),
       bottomNavigationBar: isMobile
-          ? _buildBottomNav(isAdmin)
+          ? _buildBottomNav(context, isAdmin)
           : null,
     );
   }
@@ -98,6 +99,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
           ),
+        Consumer<NetworkProvider>(
+          builder: (context, networkProvider, child) {
+            final isOffline = networkProvider.isOffline;
+            return Tooltip(
+              message: isOffline ? 'Sin conexión (Modo Offline)' : 'Conectado a Internet',
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isOffline ? Colors.grey : Colors.greenAccent,
+                  boxShadow: [
+                    if (!isOffline)
+                      BoxShadow(
+                        color: Colors.greenAccent.withOpacity(0.5),
+                        blurRadius: 6,
+                        spreadRadius: 1,
+                      )
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
         Consumer<ThemeProvider>(
           builder: (context, themeProvider, child) {
             return Switch(
@@ -328,32 +354,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Widget _buildBottomNav(bool isAdmin) {
+  Widget _buildBottomNav(BuildContext context, bool isAdmin) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? Theme.of(context).colorScheme.surface : Colors.indigo.shade50;
+    final indColor = isDark ? Colors.indigoAccent.withOpacity(0.2) : Colors.indigo.shade100;
+    final selectedIconColor = isDark ? Colors.indigoAccent : Colors.indigo;
+
     if (isAdmin) {
       return NavigationBar(
         selectedIndex: _mobileTabIndex,
         onDestinationSelected: (index) => setState(() => _mobileTabIndex = index),
-        backgroundColor: Colors.indigo.shade50,
-        indicatorColor: Colors.indigo.shade100,
-        destinations: const [
+        backgroundColor: bgColor,
+        indicatorColor: indColor,
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.list_alt),
-            selectedIcon: Icon(Icons.list_alt, color: Colors.indigo),
+            icon: const Icon(Icons.list_alt),
+            selectedIcon: Icon(Icons.list_alt, color: selectedIconColor),
             label: 'Solicitudes',
           ),
           NavigationDestination(
-            icon: Icon(Icons.meeting_room_outlined),
-            selectedIcon: Icon(Icons.meeting_room, color: Colors.indigo),
+            icon: const Icon(Icons.meeting_room_outlined),
+            selectedIcon: Icon(Icons.meeting_room, color: selectedIconColor),
             label: 'Salas',
           ),
           NavigationDestination(
-            icon: Icon(Icons.computer_outlined),
-            selectedIcon: Icon(Icons.computer, color: Colors.indigo),
+            icon: const Icon(Icons.computer_outlined),
+            selectedIcon: Icon(Icons.computer, color: selectedIconColor),
             label: 'Detalle',
           ),
           NavigationDestination(
-            icon: Icon(Icons.calendar_month),
-            selectedIcon: Icon(Icons.calendar_month, color: Colors.indigo),
+            icon: const Icon(Icons.calendar_month),
+            selectedIcon: Icon(Icons.calendar_month, color: selectedIconColor),
             label: 'Calendario',
           ),
         ],
@@ -363,22 +394,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return NavigationBar(
       selectedIndex: _mobileTabIndex,
       onDestinationSelected: (index) => setState(() => _mobileTabIndex = index),
-      backgroundColor: Colors.indigo.shade50,
-      indicatorColor: Colors.indigo.shade100,
-      destinations: const [
+      backgroundColor: bgColor,
+      indicatorColor: indColor,
+      destinations: [
         NavigationDestination(
-          icon: Icon(Icons.meeting_room_outlined),
-          selectedIcon: Icon(Icons.meeting_room, color: Colors.indigo),
+          icon: const Icon(Icons.meeting_room_outlined),
+          selectedIcon: Icon(Icons.meeting_room, color: selectedIconColor),
           label: 'Salas',
         ),
         NavigationDestination(
-          icon: Icon(Icons.computer_outlined),
-          selectedIcon: Icon(Icons.computer, color: Colors.indigo),
+          icon: const Icon(Icons.computer_outlined),
+          selectedIcon: Icon(Icons.computer, color: selectedIconColor),
           label: 'Detalle',
         ),
         NavigationDestination(
-          icon: Icon(Icons.history),
-          selectedIcon: Icon(Icons.history, color: Colors.indigo),
+          icon: const Icon(Icons.history),
+          selectedIcon: Icon(Icons.history, color: selectedIconColor),
           label: 'Mis Solicitudes',
         ),
       ],
@@ -388,6 +419,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   
 
   Widget _buildDesktopLayout(DataProvider dataProvider, AuthProvider authProvider, bool isAdmin) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Row(
       children: [
         
@@ -395,8 +428,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           width: 260,
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              border: Border(right: BorderSide(color: Colors.grey.shade300)),
+              color: isDark ? Theme.of(context).colorScheme.surface : Colors.grey.shade50,
+              border: Border(right: BorderSide(color: isDark ? Colors.grey.shade800 : Colors.grey.shade300)),
             ),
             child: Column(
               children: [

@@ -9,6 +9,7 @@ import 'providers/auth_provider.dart';
 import 'providers/data_provider.dart';
 import 'providers/request_provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/network_provider.dart';
 import 'screens/auth_wrapper.dart';
 import 'screens/dashboard_screen.dart';
 import 'services/notification_service.dart';
@@ -37,6 +38,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => DataProvider()),
         ChangeNotifierProvider(create: (_) => RequestProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => NetworkProvider()),
       ],
       child: const MyApp(),
     ),
@@ -48,8 +50,8 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
-      builder: (context, themeProvider, child) {
+    return Consumer2<ThemeProvider, NetworkProvider>(
+      builder: (context, themeProvider, networkProvider, child) {
         return MaterialApp(
           title: 'Sistema Requerimientos TI',
           debugShowCheckedModeBanner: false,
@@ -59,9 +61,36 @@ class MyApp extends StatelessWidget {
             useMaterial3: true,
           ),
           darkTheme: ThemeData.dark().copyWith(
+            scaffoldBackgroundColor: const Color(0xFF121212),
             colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.indigo,
+              seedColor: Colors.indigoAccent,
               brightness: Brightness.dark,
+              surface: const Color(0xFF1E1E1E),
+              primary: Colors.indigoAccent,
+              secondary: Colors.tealAccent,
+            ),
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Color(0xFF1F1F1F),
+              elevation: 0,
+            ),
+            cardColor: const Color(0xFF1E1E1E),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: const Color(0xFF2A2A2A),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Colors.indigoAccent),
+              ),
+              labelStyle: const TextStyle(color: Colors.white70),
+              hintStyle: const TextStyle(color: Colors.white54),
             ),
             useMaterial3: true,
           ),
