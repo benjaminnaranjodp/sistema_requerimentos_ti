@@ -26,7 +26,7 @@ class AuthWrapper extends StatelessWidget {
           return Consumer<AuthProvider>(
             builder: (context, authProvider, _) {
               if (authProvider.isAuthenticated) {
-                if (authProvider.currentRole == UserRole.admin) {
+                if (authProvider.currentRole == UserRole.admin || authProvider.currentRole == UserRole.it) {
                   return const AdminDashboardScreen();
                 }
                 return const DashboardScreen();

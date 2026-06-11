@@ -7,6 +7,7 @@ import '../providers/request_provider.dart';
 import '../providers/data_provider.dart';
 import '../providers/network_provider.dart';
 import '../models/user.dart';
+import 'auth_wrapper.dart';
 import '../models/request.dart';
 import '../models/module.dart';
 import '../widgets/admin_request_list.dart';
@@ -102,6 +103,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             tooltip: 'Cerrar Sesión',
             onPressed: () async {
               await authProvider.logout();
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const AuthWrapper()),
+                  (route) => false,
+                );
+              }
             },
           ),
         ],

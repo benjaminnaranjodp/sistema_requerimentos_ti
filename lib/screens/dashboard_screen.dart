@@ -7,6 +7,8 @@ import '../providers/theme_provider.dart';
 import '../providers/network_provider.dart';
 import '../models/module.dart';
 import '../models/request.dart';
+import '../models/user.dart';
+import 'auth_wrapper.dart';
 import '../widgets/calendar_widget.dart';
 import '../widgets/section_list_widget.dart';
 import '../widgets/module_detail_widget.dart';
@@ -202,8 +204,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           tooltip: 'Cerrar Sesión',
           onPressed: () {
             authProvider.logout();
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const AuthWrapper()),
+              (route) => false,
             );
           },
         ),
