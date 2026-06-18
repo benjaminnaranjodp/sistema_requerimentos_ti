@@ -10,6 +10,7 @@ import 'providers/data_provider.dart';
 import 'providers/request_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/network_provider.dart';
+import 'providers/chat_provider.dart';
 import 'screens/auth_wrapper.dart';
 import 'screens/dashboard_screen.dart';
 import 'services/notification_service.dart';
@@ -39,6 +40,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => RequestProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => NetworkProvider()),
+        ChangeNotifierProvider(create: (_) => ChatProvider()),
       ],
       child: const MyApp(),
     ),

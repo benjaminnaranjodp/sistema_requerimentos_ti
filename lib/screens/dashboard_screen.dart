@@ -17,6 +17,7 @@ import '../widgets/admin_request_list.dart';
 import '../widgets/docente_request_list.dart';
 import 'login_screen.dart';
 import 'edit_profile_screen.dart';
+import 'chat_assistant_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -71,6 +72,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: isMobile
           ? _buildMobileLayout(dataProvider, authProvider, isAdmin)
           : _buildDesktopLayout(dataProvider, authProvider, isAdmin),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ChatAssistantScreen()),
+          );
+        },
+        backgroundColor: Colors.teal,
+        tooltip: 'Asistente IA',
+        child: const Icon(Icons.smart_toy, color: Colors.white),
+      ),
       bottomNavigationBar: isMobile
           ? _buildBottomNav(context, isAdmin)
           : null,
